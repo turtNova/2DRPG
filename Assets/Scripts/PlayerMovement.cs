@@ -1,11 +1,33 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 
-public class PlayerMovement : MonoBehaviour
+public class PlayerController : MonoBehaviour
 {
     public Rigidbody2D playerRb;
+    public PlayerInputActions playerControls;
 
     float moveSpeed = 5;
     float moveX, moveY;
+    Vector2 moveDirection = Vector2.zero;
+
+    private InputAction move;
+    private InputAction fire;
+    
+    private void Awake()
+    {
+        playerControls = new PlayerInputActions();
+    }
+
+    private void OnEnable()
+    {
+        playerControls.Enable();
+    }
+
+    private void OnDisable()
+    {
+        playerControls.Disable();
+    }
 
     void Start()
     {
@@ -15,9 +37,11 @@ public class PlayerMovement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        moveY = Input.GetAxisRaw("Vertical");
-        moveX = Input.GetAxisRaw("Horizontal");
+        moveDirection = playerControls.ReadValue<Vector2>();
+    }
 
-        playerRb.linearVelocity = new Vector2(moveX, moveY).normalized * moveSpeed;
+    private void FixedUpdate()
+    {
+        playerRb.linearVelocity = new Vector2(moveDirection.x * moveSpeed, moveDirection.y * moveSpeed);
     }
 }
