@@ -12,7 +12,7 @@ public class PlayerController : MonoBehaviour
     Vector2 moveDirection = Vector2.zero;
 
     private InputAction move;
-    private InputAction fire;
+    private InputAction jump;
     
     private void Awake()
     {
@@ -21,12 +21,13 @@ public class PlayerController : MonoBehaviour
 
     private void OnEnable()
     {
-        playerControls.Enable();
+        move = playerControls.Player.Move;
+        move.Enable();
     }
 
     private void OnDisable()
     {
-        playerControls.Disable();
+        move.Disable();
     }
 
     void Start()
@@ -37,11 +38,13 @@ public class PlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        moveDirection = playerControls.ReadValue<Vector2>();
+        moveDirection = move.ReadValue<Vector2>();
     }
 
     private void FixedUpdate()
     {
-        playerRb.linearVelocity = new Vector2(moveDirection.x * moveSpeed, moveDirection.y * moveSpeed);
+        // Multiplies the Y direction by 0 to remove moving up/down, since this is a 2D fighter
+        playerRb.linearVelocity = new Vector2(moveDirection.x * moveSpeed, moveDirection.y * 0);
+        if moveDirection
     }
 }
