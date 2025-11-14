@@ -1,19 +1,22 @@
+using System.Threading;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
-public class PlayerMovementScript : MonoBehaviour
+public class Player1ActionScript : MonoBehaviour
 {
     public Rigidbody2D playerRb;
     public PlayerInputActions playerControls;
-    private InputAction move;
-    private InputAction jump;
+    private GameObject attackAction;
+    private InputAction move, jump, attack;
+    public float timer;
+    public float attackCooldown = 0.5f;
 
     public Vector2 moveDirection = Vector2.zero;
     private float moveSpeed = 5f;
     private float jumpForce = 10f;
 
-    public float castDistance;
+    public float castDistance = 0.2f;
     private float castBuffer = 0.2f; // Raycast distance after accounting for rigidbody height/radius
     public bool onGround = false;
     private LayerMask groundLayer; // Could be set to public and chosen in the editor instead, but I prefer this method
@@ -22,16 +25,19 @@ public class PlayerMovementScript : MonoBehaviour
 
     private void OnEnable()
     {
-        move = playerControls.Player.Move;
-        jump = playerControls.Player.Jump;
+        move = playerControls.Player1.Move;
+        jump = playerControls.Player1.Jump;
+        attack = playerControls.Player1.Attack;
         move.Enable();
         jump.Enable();
+        attack.Enable();
     }
 
     private void OnDisable()
     {
         move.Disable();
         jump.Disable();
+        attack.Disable();
     }
 
     private void Awake()
@@ -43,11 +49,14 @@ public class PlayerMovementScript : MonoBehaviour
     {
         GetComponent<Rigidbody2D>();
         castDistance = GetComponent<CircleCollider2D>().radius + castBuffer;
+        attackAction = transform.GetChild(0).gameObject;
+        timer = attackCooldown;
     }
 
     // Update is called once per frame
     void Update()
     {
+        timer += Time.deltaTime;
         moveDirection = move.ReadValue<Vector2>();
         onGround = IsGrounded();
         if (jump.triggered && IsGrounded())
@@ -55,6 +64,7 @@ public class PlayerMovementScript : MonoBehaviour
             playerRb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
             //onGround = false;
         }
+        CheckAttack();
     }
 
     private void FixedUpdate()
@@ -68,8 +78,9 @@ public class PlayerMovementScript : MonoBehaviour
     {
         // Spawns a raycast from the origin of the GameObject, which is better than offsetting the position and casting from the edge
         // This way prevents edge cases where collisions occur *inside* the gameobject
-        //RaycastHit2D hit;
-        if (Physics2D.Raycast(transform.position, -transform.up, castDistance, groundLayer))
+        // Raycast2D is an event based system
+        RaycastHit2D hit = Physics2D.Raycast(transform.position, -transform.up, castDistance, groundLayer);
+        if (hit)
         {
             return true;
         }
@@ -79,11 +90,25 @@ public class PlayerMovementScript : MonoBehaviour
         }
     }
 
+    private void CheckAttack()
+    {
+        if (attack.triggered && timer >= attackCooldown)
+        {
+            timer = 0f;
+            attackAction.SetActive(true);
+        }
+        if (timer >= attackCooldown)
+        {
+            attackAction.SetActive(false);
+        }
+    }
+
     private void OnDrawGizmos()
     {
         Gizmos.DrawWireCube(transform.position - transform.up * castDistance, new Vector3(0.1f, castDistance, 0));
     }
 
+    // Check if on ground with collisions
     //private void OnCollisionEnter2D(Collision2D collision)
     //{
     //    if (collision.gameObject.layer == 3)
