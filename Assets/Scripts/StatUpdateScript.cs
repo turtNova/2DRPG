@@ -3,13 +3,13 @@ using UnityEngine;
 
 public class StatUpdateScript : MonoBehaviour
 {
-    private Player1ActionScript playerMovement;
+    private Player1Script playerMovement;
     private TMP_Text text;
     private GameManagerScript gameManagerScript;
 
     private void Awake()
     {
-        playerMovement = GameObject.FindWithTag("player1").GetComponent<Player1ActionScript>();
+        playerMovement = GameObject.FindWithTag("player1").GetComponent<Player1Script>();
     }
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()

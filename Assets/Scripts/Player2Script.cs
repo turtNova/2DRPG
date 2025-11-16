@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
-public class Player1ActionScript : MonoBehaviour
+public class Player2Script : MonoBehaviour
 {
     public Rigidbody2D playerRb;
     public PlayerInputActions playerControls;
@@ -25,9 +25,9 @@ public class Player1ActionScript : MonoBehaviour
 
     private void OnEnable()
     {
-        move = playerControls.Player1.Move;
-        jump = playerControls.Player1.Jump;
-        attack = playerControls.Player1.Attack;
+        move = playerControls.Player2.Move;
+        jump = playerControls.Player2.Jump;
+        attack = playerControls.Player2.Attack;
         move.Enable();
         jump.Enable();
         attack.Enable();
