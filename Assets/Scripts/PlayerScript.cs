@@ -15,23 +15,30 @@ public class PlayerScript : MonoBehaviour
 
     // Physics
     private Rigidbody2D playerRb;
-    public Vector2 moveDirection = Vector2.zero;
+    private Transform enemyTransform;
+    public Vector2 moveDirection;
     public float moveSpeed = 10f;
     public float jumpForce = 20f;
-    private float castDistance;
+    public float castDistance;
     public bool onGround = false;
     private LayerMask groundLayer; // Could be set to public and chosen in the editor instead, but I prefer this method
+    private LayerMask playerLayer;
+    private LayerMask enemyLayer;
+    private int playerLayerInt;
+    private int enemyLayerInt;
 
     // Damage & Health
     private GameManagerScript gameManagerScript;
     public GameObject attack1;
     public float attackCooldownTimer = 0f;
     public float attackCooldown = 0.3f;
-    private float attackDuration = 20f;
+    public float attackDuration = 0.1f;
+    public float iFramesOnAttack;
+    public float attackOffset;
     private float localIFrames = 0f;
-    public float iFramesOnAttack = 0.5f;
-    private int attackDirection;
-    private LayerMask enemyLayer;
+    private Vector3 punchScale;
+    private Vector3 playerScale;
+
 
 
     private void OnEnable()
@@ -62,30 +69,38 @@ public class PlayerScript : MonoBehaviour
 
     private void Awake()
     {
+        // Assign objects
         playerControls = new PlayerInputActions();
         groundLayer = LayerMask.GetMask("Ground");
+        playerLayer = LayerMask.GetMask($"player{3 - playerNumber}");
         enemyLayer = LayerMask.GetMask($"player{playerNumber}");
-        attackDirection = 1 - 2 * (playerNumber - 1);
-}
-    void Start()
-    {
-        playerRb = GetComponent<Rigidbody2D>();
-        gameManagerScript = GameObject.FindWithTag("gameManager").GetComponent<GameManagerScript>();
-        castDistance = transform.lossyScale.y * gameObject.GetComponent<CircleCollider2D>().radius * 1.2f;
-        Debug.Log(castDistance);
+
+        // Math out variables
+        playerLayerInt = 5 + playerNumber;
+        enemyLayerInt = 8 - playerNumber;
+        punchScale = attack1.transform.localScale;
+        playerScale = transform.lossyScale;
     }
 
-    // Update is called once per frame
+    void Start()
+    {
+        // Connect components
+        playerRb = GetComponent<Rigidbody2D>();
+        gameManagerScript = GameObject.FindWithTag("gameManager").GetComponent<GameManagerScript>();
+        enemyTransform = GameObject.FindWithTag($"player{3 - playerNumber}").transform;
+        castDistance = playerScale.y * gameObject.GetComponent<CircleCollider2D>().radius * 1.2f;
+        attackOffset = punchScale.x / 2 + playerScale.x * gameObject.GetComponent<CircleCollider2D>().radius;
+    }
+
     void Update()
     {
         attackCooldownTimer -= Time.deltaTime;
         localIFrames -= Time.deltaTime;
         moveDirection = move.ReadValue<Vector2>();
-        //onGround = IsGrounded();
-        if (jump.triggered && IsGrounded())
+        onGround = IsGrounded();
+        if (jump.triggered && onGround)
         {
             playerRb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
-            //onGround = false;
         }
         CheckAttack();
     }
@@ -96,7 +111,7 @@ public class PlayerScript : MonoBehaviour
         playerRb.linearVelocityX = moveDirection.x * moveSpeed;
     }
 
-    // 2D Raycast pointed down method
+    // Check if colliding with the Ground layer with a 2D Raycast pointed down
     public bool IsGrounded()
     {
         // Spawns a raycast from the origin of the GameObject, which is better than offsetting the position and casting from the edge
@@ -124,16 +139,23 @@ public class PlayerScript : MonoBehaviour
 
     private void AttackSpawn()
     {
-        Vector3 attackOffset = transform.position + new Vector3(-1f, 0f);
-        GameObject punch = Instantiate(attack1, attackOffset, transform.rotation, transform);
-        punch.layer = 7;
+        // Spawns the attack hitbox as the child of the Player and offsets it based off the direction the enemy is in
+        GameObject punch = Instantiate(attack1, transform.position + new Vector3(attackOffset * EnemyDirection(), 0f), transform.rotation, transform);
+        punch.layer = enemyLayerInt;
+        punch.transform.localScale = new Vector3(punchScale.x / playerScale.x, punchScale.y / playerScale.y, punchScale.z);
         punch.SetActive(true);
-        Destroy(punch, attackDuration + attackCooldown);
+        Destroy(punch, attackDuration);
+    }
+
+    private int EnemyDirection()
+    {
+        if (gameObject.transform.position.x <= enemyTransform.position.x)
+        { return 1; } else { return -1; }
     }
 
     private void OnTriggerStay2D(Collider2D collision)
     {
-        if (collision.gameObject.layer == 5 + playerNumber && localIFrames <= 0.01f)
+        if (collision.gameObject.layer == playerLayerInt && localIFrames <= 0.01f)
         {
             localIFrames = iFramesOnAttack;
             Debug.Log($"Got hit by Player {playerNumber}");
