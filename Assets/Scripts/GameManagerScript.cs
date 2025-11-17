@@ -2,11 +2,12 @@ using UnityEngine;
 
 public class GameManagerScript : MonoBehaviour
 {
+    // Variables
     public int player1Hp = 100;
     public int player2Hp = 100;
     private GameObject player1;
     private GameObject player2;
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+
     void Start()
     {
         player1 = GameObject.FindWithTag("player1");
@@ -27,13 +28,15 @@ public class GameManagerScript : MonoBehaviour
 
     }
 
-    public void DamagePlayer2(int damage)
+    public void DamagePlayer(int damage, int player)
     {
-        player2Hp -= damage;
-    }
-
-    public void DamagePlayer1(int damage)
-    {
-        player1Hp -= damage;
+        if (player == 1)
+        {
+            player1Hp -= damage;
+        }
+        else
+        {
+            player2Hp -= damage;
+        }
     }
 }

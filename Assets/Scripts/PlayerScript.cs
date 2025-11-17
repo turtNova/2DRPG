@@ -2,34 +2,52 @@ using System.Threading;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.Timeline;
 
-public class Player1Script : MonoBehaviour
+public class PlayerScript : MonoBehaviour
 {
+    // Player 1 or 2
+    public int playerNumber = 1;
+
     // Input
     public PlayerInputActions playerControls;
-    private GameObject attackAction;
     private InputAction move, jump, attack;
 
     // Physics
-    public Rigidbody2D playerRb;
+    private Rigidbody2D playerRb;
     public Vector2 moveDirection = Vector2.zero;
     public float moveSpeed = 10f;
     public float jumpForce = 20f;
-    public float castDistance = 0.2f;
+    private float castDistance;
     public bool onGround = false;
     private LayerMask groundLayer; // Could be set to public and chosen in the editor instead, but I prefer this method
 
     // Damage & Health
-    public float attackCooldownTimer = 0.5f;
-    public float localIFrames = 0f;
-
+    private GameManagerScript gameManagerScript;
+    public GameObject attack1;
+    public float attackCooldownTimer = 0f;
+    public float attackCooldown = 0.3f;
+    private float attackDuration = 20f;
+    private float localIFrames = 0f;
+    public float iFramesOnAttack = 0.5f;
+    private int attackDirection;
+    private LayerMask enemyLayer;
 
 
     private void OnEnable()
     {
-        move = playerControls.Player1.Move;
-        jump = playerControls.Player1.Jump;
-        attack = playerControls.Player1.Attack;
+        if (playerNumber == 1)
+        {
+            move = playerControls.Player1.Move;
+            jump = playerControls.Player1.Jump;
+            attack = playerControls.Player1.Attack;
+        }
+        else
+        {
+            move = playerControls.Player2.Move;
+            jump = playerControls.Player2.Jump;
+            attack = playerControls.Player2.Attack;
+        }
         move.Enable();
         jump.Enable();
         attack.Enable();
@@ -46,25 +64,30 @@ public class Player1Script : MonoBehaviour
     {
         playerControls = new PlayerInputActions();
         groundLayer = LayerMask.GetMask("Ground");
+        enemyLayer = LayerMask.GetMask($"player{playerNumber}");
+        attackDirection = 1 - 2 * (playerNumber - 1);
 }
     void Start()
     {
-        GetComponent<Rigidbody2D>();
-        attackAction = transform.GetChild(0).gameObject;
+        playerRb = GetComponent<Rigidbody2D>();
+        gameManagerScript = GameObject.FindWithTag("gameManager").GetComponent<GameManagerScript>();
+        castDistance = transform.lossyScale.y * gameObject.GetComponent<CircleCollider2D>().radius * 1.2f;
+        Debug.Log(castDistance);
     }
 
     // Update is called once per frame
     void Update()
     {
         attackCooldownTimer -= Time.deltaTime;
+        localIFrames -= Time.deltaTime;
         moveDirection = move.ReadValue<Vector2>();
-        onGround = IsGrounded();
+        //onGround = IsGrounded();
         if (jump.triggered && IsGrounded())
         {
             playerRb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
             //onGround = false;
         }
-        CheckAttack(0.5f, 0.2f);
+        CheckAttack();
     }
 
     private void FixedUpdate()
@@ -73,7 +96,7 @@ public class Player1Script : MonoBehaviour
         playerRb.linearVelocityX = moveDirection.x * moveSpeed;
     }
 
-    // 2D Raycast down method
+    // 2D Raycast pointed down method
     public bool IsGrounded()
     {
         // Spawns a raycast from the origin of the GameObject, which is better than offsetting the position and casting from the edge
@@ -90,16 +113,31 @@ public class Player1Script : MonoBehaviour
         }
     }
 
-    private void CheckAttack(float attackCooldown, float attackDuration)
+    private void CheckAttack()
     {
-        if (attack.triggered && attackCooldownTimer <= attackCooldown)
+        if (attack.triggered && attackCooldownTimer <= 0f)
         {
-            attackCooldownTimer = attackCooldown;
-            attackAction.SetActive(true);
+            attackCooldownTimer = attackDuration + attackCooldown;
+            AttackSpawn();
         }
-        if (attackCooldownTimer <= attackCooldown - attackDuration)
+    }
+
+    private void AttackSpawn()
+    {
+        Vector3 attackOffset = transform.position + new Vector3(-1f, 0f);
+        GameObject punch = Instantiate(attack1, attackOffset, transform.rotation, transform);
+        punch.layer = 7;
+        punch.SetActive(true);
+        Destroy(punch, attackDuration + attackCooldown);
+    }
+
+    private void OnTriggerStay2D(Collider2D collision)
+    {
+        if (collision.gameObject.layer == 5 + playerNumber && localIFrames <= 0.01f)
         {
-            attackAction.SetActive(false);
+            localIFrames = iFramesOnAttack;
+            Debug.Log($"Got hit by Player {playerNumber}");
+            gameManagerScript.DamagePlayer(20, playerNumber);
         }
     }
 
