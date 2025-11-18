@@ -17,10 +17,11 @@ public class PlayerScript : MonoBehaviour
     private Rigidbody2D playerRb;
     private Transform enemyTransform;
     public Vector2 moveDirection;
-    public float moveSpeed = 10f;
+    [SerializeField] private float moveSpeed = 10f;
     public float jumpForce = 20f;
     public float castDistance;
     public bool onGround = false;
+    private bool jumped = false;
     private LayerMask groundLayer; // Could be set to public and chosen in the editor instead, but I prefer this method
     private LayerMask playerLayer;
     private LayerMask enemyLayer;
@@ -43,14 +44,11 @@ public class PlayerScript : MonoBehaviour
 
     private void OnEnable()
     {
-        if (playerNumber == 1)
-        {
+        if (playerNumber == 1) {
             move = playerControls.Player1.Move;
             jump = playerControls.Player1.Jump;
             attack = playerControls.Player1.Attack;
-        }
-        else
-        {
+        } else {
             move = playerControls.Player2.Move;
             jump = playerControls.Player2.Jump;
             attack = playerControls.Player2.Attack;
@@ -58,6 +56,8 @@ public class PlayerScript : MonoBehaviour
         move.Enable();
         jump.Enable();
         attack.Enable();
+        jump.performed += JumpPerformed;
+        jump.canceled += JumpCanceled;
     }
 
     private void OnDisable()
@@ -97,11 +97,6 @@ public class PlayerScript : MonoBehaviour
         attackCooldownTimer -= Time.deltaTime;
         localIFrames -= Time.deltaTime;
         moveDirection = move.ReadValue<Vector2>();
-        onGround = IsGrounded();
-        if (jump.triggered && onGround)
-        {
-            playerRb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
-        }
         CheckAttack();
     }
 
@@ -109,6 +104,10 @@ public class PlayerScript : MonoBehaviour
     {
         // Sets the horizontal velocity to the horizontal movement axis
         playerRb.linearVelocityX = moveDirection.x * moveSpeed;
+        onGround = IsGrounded();
+        if (jumped && onGround) {
+            playerRb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
+        }
     }
 
     // Check if colliding with the Ground layer with a 2D Raycast pointed down
@@ -163,8 +162,15 @@ public class PlayerScript : MonoBehaviour
         }
     }
 
-    private void OnDrawGizmos()
-    {
+    private void JumpPerformed(InputAction.CallbackContext context) {
+        jumped = true;
+    }
+
+    private void JumpCanceled(InputAction.CallbackContext context) {
+        jumped = false;
+    }
+
+    private void OnDrawGizmos() {
         Gizmos.DrawLine(transform.position, transform.position + Vector3.down * castDistance);
     }
 
